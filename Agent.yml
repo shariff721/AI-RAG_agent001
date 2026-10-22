@@ -1,0 +1,77 @@
+kind: workflow
+trigger:
+  kind: OnConversationStart
+  id: trigger_wf
+  actions:
+    - kind: InvokeAzureAgent
+      id: node-1792687900748
+      agent:
+        name: invoice-retrival
+      conversationId: =System.ConversationId
+      input:
+        messages: =System.LastMessage.Text
+      output:
+        autoSend: true
+        messages: Local.invoice
+    - kind: InvokeAzureAgent
+      id: node-1792688128087
+      agent:
+        name: work-docs-retrival
+      conversationId: =System.ConversationId
+      input:
+        messages: =Local.invoice
+      output:
+        autoSend: true
+        messages: Local.workdoc
+    - kind: InvokeAzureAgent
+      id: node-1792688770899
+      agent:
+        name: summary
+      conversationId: =System.ConversationId
+      input:
+        messages: =Local.workdoc
+      output:
+        autoSend: true
+        messages: Local.summary
+    - kind: Question
+      variable: Local.request
+      id: node-1792689785176
+      entity: StringPrebuiltEntity
+      skipQuestionMode: SkipOnFirstExecutionIfVariableHasValue
+      prompt: If you need a follow up, start your question with yes..
+    - kind: ConditionGroup
+      id: node-1792691866221
+      conditions:
+        - id: if-check-yes
+          condition: =Not(IsBlank(Find("yes", Lower(Local.request))))
+          actions:
+            - kind: InvokeAzureAgent
+              id: node-1792692944783
+              agent:
+                name: new-followup
+              conversationId: =System.ConversationId
+              input:
+                messages: =Local.summary
+              output:
+                autoSend: true
+                messages: Local.followup
+            - kind: Question
+              variable: Local.followup1
+              id: node-1792705288628
+              entity: StringPrebuiltEntity
+              skipQuestionMode: SkipOnFirstExecutionIfVariableHasValue
+              prompt: Do you have any follow-up questions?
+            - kind: ConditionGroup
+              id: node-1792705313913
+              conditions:
+                - id: if-check-followup-yes
+                  condition: =Not(IsBlank(Find("yes", Lower(Local.followup1))))
+                  actions:
+                    - kind: GotoAction
+                      actionId: node-1792689785176
+                      id: node-1792705519944
+              elseActions: []
+      elseActions: []
+id: ""
+name: invoice-workdoc-retrival
+description: ""
